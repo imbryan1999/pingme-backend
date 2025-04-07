@@ -10,4 +10,4 @@ app.use(json())
 app.use(cors())
 
 // export module
-export default app
+export default app  
