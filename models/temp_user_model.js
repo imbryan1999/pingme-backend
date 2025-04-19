@@ -1,0 +1,29 @@
+import mongoose from 'mongoose';
+import db from "../config/db_config.js"
+import bcrypt from "bcryptjs";
+
+const {Schema} = mongoose
+
+const TempUserSchema = new Schema({
+  username: { type: String, required: true },
+  fullname: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  photo: { type: String },
+  otp: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now, expires: 600 }, // Auto-delete after 10 min
+});
+
+TempUserSchema.pre("save", async function(){
+    try {
+        var user = this
+        const salt = await(bcrypt.genSalt())
+        const hashPass = await bcrypt.hash(user.password, salt)
+        user.password = hashPass
+    } catch (error) {
+        throw error
+    }
+})
+
+const TempUserModel = db.model("temp_user_collection", TempUserSchema)
+export default TempUserModel  

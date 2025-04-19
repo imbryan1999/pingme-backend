@@ -1,6 +1,7 @@
 // import required packages
 import app from "./app.js";
 import db from "./config/db_config.js"
+import routes from "./routes/user_route.js"
 
 // Set the port 
 const port = process.env.PORT || 6969;

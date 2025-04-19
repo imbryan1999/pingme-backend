@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import db from "../config/db_config"
+import db from "../config/db_config.js"
 import bcrypt from "bcryptjs";
 import shortid from "shortid";
 import { type } from "os";
@@ -29,5 +29,9 @@ userSchema.pre("save", async function(){
     }
 })
 
+userSchema.methods.comparePassword = async function (candidatePassword) {
+    return await bcrypt.compare(candidatePassword, this.password)
+  }
+
 const UserModel = db.model("users_collection", userSchema)
-module.exports = UserModel  
+export default UserModel  
