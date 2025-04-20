@@ -21,23 +21,25 @@ export async function register(req, res, next) {
         }
 
         // generate OTP
-        const otp = otpGenerator.generate(6, {
-            upperCaseAlphabets: true,
-            specialChars: false,
-        });
+        // const otp = otpGenerator.generate(4, {
+        //     upperCaseAlphabets: false,
+        //     lowerCaseAlphabets: false,
+        //     specialChars: false,
+        //     digits: true
+        // });
 
-        const emailSent = await sendOTPEmail(email, otp)
+        // const emailSent = await sendOTPEmail(email, otp)
         
-        if(!emailSent) {
-            return res.status(500).json({
-                status: false,
-                statusCode: 500,
-                message: "Failed to send OTP email.",
-            });
-        }
+        // if(!emailSent) {
+        //     return res.status(500).json({
+        //         status: false,
+        //         statusCode: 500,
+        //         message: "Failed to send OTP email.",
+        //     });
+        // }
 
         // store unverified user + otp in DB (you can hash the OTP for security)
-        await UserService.storeTempUser(username, fullname, email, password, photo, otp);
+        await UserService.storeTempUser(username, fullname, email, password, photo, "0000");
         res.status(200).json({
             status: true,
             statusCode: 200,

@@ -14,16 +14,5 @@ const TempUserSchema = new Schema({
   createdAt: { type: Date, default: Date.now, expires: 600 }, // Auto-delete after 10 min
 });
 
-TempUserSchema.pre("save", async function(){
-    try {
-        var user = this
-        const salt = await(bcrypt.genSalt())
-        const hashPass = await bcrypt.hash(user.password, salt)
-        user.password = hashPass
-    } catch (error) {
-        throw error
-    }
-})
-
 const TempUserModel = db.model("temp_user_collection", TempUserSchema)
 export default TempUserModel  

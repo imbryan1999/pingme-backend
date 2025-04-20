@@ -18,16 +18,17 @@ const userSchema = new Schema({
 }, {timeseries: true}
 )
 
-userSchema.pre("save", async function(){
-    try {
-        var user = this
-        const salt = await(bcrypt.genSalt())
-        const hashPass = await bcrypt.hash(user.password, salt)
-        user.password = hashPass
-    } catch (error) {
-        throw error
-    }
-})
+userSchema.pre("save", async function (next) {
+  try {
+    if (!this.isModified('password')) return next(); // ⬅️ Don't re-hash if password isn't changed
+
+    const salt = await bcrypt.genSalt();
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 userSchema.methods.comparePassword = async function (candidatePassword) {
     return await bcrypt.compare(candidatePassword, this.password)
