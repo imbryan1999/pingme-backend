@@ -1,35 +1,49 @@
 import mongoose, { mongo } from "mongoose";
-import db from "../config/db_config"
-import bcrypt from "bcryptjs";
-import shortid from "shortid";
-import { type } from "os";
-import { ref } from "process";
 
 const {Schema} = mongoose
 
 const messageSchema = new Schema({
-    senderId : {
-        type: mongoose.Schema.Types.ObjectId,
-        ref : 'user_collection', 
-        require: true
-    },
-    chatRoomId : {
-        type: mongoose.Schema.Types.ObjectId,
-        ref : 'chatroom_collection', 
-        require: true
-    },
-    content : {type: String, required: true},
-    readBy : [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref : 'user_collection'
-    }],
-  }, {timeseries: true}
-  )
+  senderId: {
+    type: Schema.Types.ObjectId,
+    ref: 'user_collection',
+    required: true
+  },
+  chatRoomId: {
+    type: Schema.Types.ObjectId,
+    ref: 'chatroom_collection',
+    required: true
+  },
+  content: { 
+    type: String, 
+    required: true 
+  },
+  readBy: [{
+    type: Schema.Types.ObjectId,
+    ref: 'user_collection'
+  }],
+  // For Socket.IO message status tracking
+  status: {
+    type: String,
+    enum: ['sent', 'delivered', 'read'],
+    default: 'sent'
+  }
+}, { 
+  timestamps: true, // Use this instead of timeseries for standard messaging
+  bufferCommands: false // Better for Socket.IO high-frequency inserts
+});
 
-  // Indexes for faster queries
-messageSchema.index({ chatRoomId: 1 }); // Optimize chat room message fetches
-messageSchema.index({ senderId: 1 });   // Optimize sender-based queries
-messageSchema.index({ createdAt: -1 }); // Sort messages newest-first
+// Indexes for faster queries
+// Critical for fetching chat history
+messageSchema.index({ chatRoomId: 1, createdAt: -1 }); 
+
+// For sender-specific queries (e.g., "my messages")
+messageSchema.index({ senderId: 1, createdAt: -1 });  
+
+// For read/unread status checks
+messageSchema.index({ chatRoomId: 1, readBy: 1 });    
+
+// For message status updates (Socket.IO acks)
+messageSchema.index({ _id: 1, status: 1 }); 
 
 const Message = mongoose.model('message_collection', messageSchema);
-module.exports = Message;
+export default Message;
