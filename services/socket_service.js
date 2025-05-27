@@ -20,25 +20,35 @@ export const registerSocketEvents = (io) => {
     });
 
     // --- Chat Room Events ---
-    socket.on(SOCKET_EVENTS.CREATE_PRIVATE_CHAT, async ({ userId1, userId2 }) => {
-      try {
-        // Validate user authorization
-        if (![userId1, userId2].includes(userId)) {
-          throw new Error('Unauthorized chat creation');
-        }
+  socket.on(SOCKET_EVENTS.CREATE_PRIVATE_CHAT, async ({ userId1, userId2 }, callback) => {
+    try {
+      console.log("Handling CREATE_PRIVATE_CHAT for users:", userId1, userId2);
+    
+    // if (![userId1, userId2].includes(userId?.toString())) {
+    //   throw new Error('Unauthorized chat creation');
+    // }
 
-        const chat = await getOrCreatePrivateChat(userId1, userId2);
-        
-        // Notify both users
-        io.to(userId1).to(userId2).emit(SOCKET_EVENTS.PRIVATE_CHAT_CREATED, chat);
-      } catch (err) {
-        console.error('Chat creation error:', err);
-        socket.emit('error', { 
-          event: 'createPrivateChat',
-          message: err.message 
-        });
-      }
-    });
+    const chat = await getOrCreatePrivateChat(userId1, userId2);
+    console.log("Chat created:", chat._id);
+    
+    // Send response to requester
+    if (typeof callback === 'function') {
+      callback({ status: 'success', chat });
+    }
+    
+    // Notify both users
+    io.to(userId1.toString()).to(userId2.toString()).emit(
+      SOCKET_EVENTS.PRIVATE_CHAT_CREATED, 
+      chat
+    );
+    
+  } catch (err) {
+    console.error('Error in CREATE_PRIVATE_CHAT:', err);
+    if (typeof callback === 'function') {
+      callback({ status: 'error', message: err.message });
+    }
+  }
+});
 
     socket.on(SOCKET_EVENTS.JOIN_ROOM, (chatId) => {
       socket.join(chatId);

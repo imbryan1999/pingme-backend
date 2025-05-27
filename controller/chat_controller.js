@@ -1,39 +1,45 @@
 import ChatRoom from '../models/chatroom_model.js';
-
+import UserModel from '../models/user_model.js';
 // 1. Get or create 1-to-1 chat room
-export const getOrCreatePrivateChat = async (req, res) => {
-try {
-    const { userId1, userId2 } = req.body;
 
-    if (!userId1 || !userId2) {
-      return res.status(400).json({ message: 'User IDs required' });
-    }
+export const getOrCreatePrivateChat = async (userId1, userId2) => {
+  const user1 = await UserModel.findOne({ userId: userId1 });
+  const user2 = await UserModel.findOne({ userId: userId2 });
 
-    // Check if room already exists
+  if (!user1 || !user2) {
+    throw new Error('User IDs are required');
+  }
+
+  try {
+    const participants = [user1._id, user2._id].sort();
+    
+    // Check if private room already exists
     let room = await ChatRoom.findOne({
       isGroup: false,
-      participants: { $all: [userId1, userId2], $size: 2 }
-    }).populate('participants', 'name');
+      participants: { $all: participants, $size: 2 }
+    }).populate('participants', 'name username userId');
 
-    // Create if not found
+    // If not found, create a new one
     if (!room) {
       room = await ChatRoom.create({
         isGroup: false,
-        participants: [userId1, userId2]
+        participants
       });
-      
-      // Populate after creation
-      room = await ChatRoom.findById(room._id)
-        .populate('participants', 'name');
+
+      room = await ChatRoom.findById(room._id).populate('participants', 'name username userId');
     }
 
-    return res.status(200).json(room);
+    return room;
   } catch (err) {
     console.error('Private chat error:', err);
-    res.status(500).json({ error: 'Server error' });
+    // Add more context to the error
+    if (err.name === 'CastError') {
+      throw new Error(`Invalid user ID format. Please check the provided IDs: ${userId1}, ${userId2}`);
+    }
+    throw err;
   }
+};
 
-}
 
 
 // 2. Create a new group chat
