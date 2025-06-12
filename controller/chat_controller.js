@@ -1,4 +1,5 @@
 import ChatRoom from '../models/chatroom_model.js';
+import Message from '../models/message_model.js';
 import UserModel from '../models/user_model.js';
 // 1. Get or create 1-to-1 chat room
 
@@ -40,9 +41,42 @@ export const getOrCreatePrivateChat = async (userId1, userId2) => {
   }
 };
 
+// export const createAndSendMessage = async ({ senderId, chatRoomId, content }) => {
+//   try {
+//     if (!senderId || !chatRoomId || !content?.trim()) {
+//       throw new Error('All fields (senderId, chatRoomId, content) are required');
+//     }
+
+//     // Create message
+//     let message = await Message.create({
+//       senderId,
+//       chatRoomId,
+//       content,
+//       status: 'sent',
+//     });
+
+//     // Populate sender info
+//     message = await message.populate([
+//       { path: 'senderId', select: 'userId username name' },
+//     ]);
+
+//     // Update chat room timestamp
+//     await ChatRoom.updateOne(
+//       { _id: chatRoomId },
+//       { $set: { updatedAt: new Date() } }
+//     );
+
+//     return message;
+
+//   } catch (error) {
+//     console.error('sendMessage error:', error);
+//     throw new Error('Failed to send message: ' + error.message);
+//   }
+// };
 
 
 // 2. Create a new group chat
+
 export const createGroupChat = async (req, res) => {
   try {
     const { name, participants, adminId } = req.body;

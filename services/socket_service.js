@@ -3,6 +3,8 @@ import { getOrCreatePrivateChat } from "../controller/chat_controller.js";
 import ChatRoom from "../models/chatroom_model.js";
 import Message from "../models/message_model.js";
 import { socketAuthMiddleware } from "./socket_auth.js";
+import mongoose from "mongoose";
+import UserModel from "../models/user_model.js";
 
 export const registerSocketEvents = (io) => {
   
@@ -48,6 +50,7 @@ export const registerSocketEvents = (io) => {
       callback({ status: 'error', message: err.message });
     }
   }
+  
 });
 
     socket.on(SOCKET_EVENTS.JOIN_ROOM, (chatId) => {
@@ -56,18 +59,26 @@ export const registerSocketEvents = (io) => {
     });
 
     // --- Message Events ---
-    socket.on(SOCKET_EVENTS.SEND_MESSAGE, async ({ chatRoomId, content }) => {
+    socket.on(SOCKET_EVENTS.SEND_MESSAGE, async ({ chatRoomId, content }, callback) => {
       try {
+        console.log('SEND_MESSAGE received:', { chatRoomId, userId, content });
         if (!content?.trim()) {
           throw new Error('Message content cannot be empty');
         }
 
+        const new_user_id = await UserModel.findOne({ userId: userId });
+      
         const message = await Message.create({
-          senderId: userId,
+          senderId: new_user_id,
           chatRoomId,
           content,
           status: 'sent'
         }).then(m => m.populate('senderId', 'status'));
+
+        // Send response to requester
+        if (typeof callback === 'function') {
+          callback({ status: 'success', message});
+        }
 
         // Broadcast to room (except sender)
         socket.to(chatRoomId).emit(SOCKET_EVENTS.NEW_MESSAGE, message);
