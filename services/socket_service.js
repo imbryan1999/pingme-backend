@@ -66,18 +66,20 @@ export const registerSocketEvents = (io) => {
           throw new Error('Message content cannot be empty');
         }
 
-        const new_user_id = await UserModel.findOne({ userId: userId });
+        // const new_user_id = await UserModel.findOne({ userId: userId });
+        const user = await UserModel.findOne({ userId });
       
         const message = await Message.create({
-          senderId: new_user_id,
+          senderId: userId,
           chatRoomId,
           content,
           status: 'sent'
-        }).then(m => m.populate('senderId', 'status'));
+        });
 
         // Send response to requester
         if (typeof callback === 'function') {
-          callback({ status: 'success', message});
+          // callback({ status: 'success', message});
+          callback({ status: 'success', message: { ...message.toObject(), senderId: userId } });
         }
 
         // Broadcast to room (except sender)

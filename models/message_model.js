@@ -4,8 +4,8 @@ const {Schema} = mongoose
 
 const messageSchema = new Schema({
   senderId: {
-    type: Schema.Types.ObjectId,
-    ref: 'users_collection',
+    type: String,
+    // ref: 'users_collection',
     required: true
   },
   chatRoomId: {
