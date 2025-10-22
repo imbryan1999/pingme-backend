@@ -1,6 +1,8 @@
 // utils/socketAuth.js
 import jwt from 'jsonwebtoken';
 import User from '../models/user_model.js';
+import dotenv from 'dotenv';
+dotenv.config();
 
 export const socketAuthMiddleware = (socket, next) => {
   console.log("🛡️ Running socket auth middleware...");
@@ -14,7 +16,8 @@ export const socketAuthMiddleware = (socket, next) => {
     return next(new Error('Authentication error: No token provided'));
   }
 
-  jwt.verify(token, 'secret', (err, decoded) => {
+  const JWT_SECRET = process.env.JWT_SECRET || 'secret';
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
     if (err) {
       console.log('⚠️ Invalid token:', err.message);
       return next(new Error('Authentication error: Invalid token'));
