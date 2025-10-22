@@ -4,8 +4,8 @@ const {Schema} = mongoose
 
 const messageSchema = new Schema({
   senderId: {
-    type: Schema.Types.ObjectId,
-    ref: 'user_collection',
+    type: String,
+    // ref: 'users_collection',
     required: true
   },
   chatRoomId: {
@@ -19,7 +19,7 @@ const messageSchema = new Schema({
   },
   readBy: [{
     type: Schema.Types.ObjectId,
-    ref: 'user_collection'
+    ref: 'users_collection'
   }],
   // For Socket.IO message status tracking
   status: {

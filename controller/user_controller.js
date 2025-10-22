@@ -1,5 +1,7 @@
 import UserService from "../services/user_services.js";
 import jwt from "jsonwebtoken"
+import dotenv from 'dotenv';
+dotenv.config();
 import UserModel from "../models/user_model.js"
 import otpGenerator from 'otp-generator';
 import { sendOTPEmail } from "../services/email_service.js";
@@ -80,7 +82,8 @@ export async function login(req, res, next) {
         }
 
         let tokenData = {_id: existingUser.userId, email: existingUser.email}        
-        const token = await UserService.generateToken(tokenData, 'secret', '24h')
+    const JWT_SECRET = process.env.JWT_SECRET || 'secret';
+    const token = await UserService.generateToken(tokenData, JWT_SECRET, '24h')
 
         const userInfo = {
             userId : existingUser.userId,
@@ -120,7 +123,8 @@ export async function verifyOtp(req, res) {
         
         const successResponse = await UserService.signUp(userData.username, userData.fullname, userData.email, userData.password, userData.photo)
         let tokenData = {_id: successResponse.userId, email: successResponse.email}
-        const token = await UserService.generateToken(tokenData, 'secret', '24h')
+    const JWT_SECRET = process.env.JWT_SECRET || 'secret';
+    const token = await UserService.generateToken(tokenData, JWT_SECRET, '24h')
 
         //send success response
         res.status(200).json({
@@ -138,7 +142,7 @@ export async function verifyOtp(req, res) {
         })
 
     } catch (error) {
-        console.error("Error in OTP verification:", err);
+        console.error("Error in OTP verification:", error);
         res.status(500).json({
             status: false,
             message: "Internal server error",

@@ -1,17 +1,16 @@
-// import required packages
-import { createConnection } from "mongoose";
-import dotenv from "dotenv"
-dotenv.config()
+// db.js
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+dotenv.config();
 
-    // Connect to MongoDB
-    const connection = createConnection(process.env.MONGODB_URL);
-    
-    connection.on('open', () => {
-    console.log('MongoDB Connected...')
-    })
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGODB_URL);
+    console.log('✅ MongoDB Connected...');
+  } catch (error) {
+    console.error('❌ MongoDB connection error:', error.message);
+    process.exit(1); // Exit process if DB connection fails
+  }
+};
 
-  connection.on('error', (error) => {
-    console.log('MongoDB connection error:', error);
-})
-
-export default connection
+export default connectDB;

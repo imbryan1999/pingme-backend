@@ -14,5 +14,5 @@ const TempUserSchema = new Schema({
   createdAt: { type: Date, default: Date.now, expires: 600 }, // Auto-delete after 10 min
 });
 
-const TempUserModel = db.model("temp_user_collection", TempUserSchema)
+const TempUserModel = mongoose.model("temp_user_collection", TempUserSchema)
 export default TempUserModel  

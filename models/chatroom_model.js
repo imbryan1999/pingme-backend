@@ -13,13 +13,13 @@ const chatRoomSchema = new Schema({
     },    
     isGroup: {type: Boolean, default: false},
     participants: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'user_collection', // Links to the 'users' collection
+        type: mongoose.Schema.Types.ObjectId,  // Can handle both ObjectId and String
+        ref: 'users_collection',
         required: true
-    }], 
+    }],    
     adminId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'user_collection', // Links to the 'users' collection
+        type: Schema.Types.Mixed,  // Can handle both ObjectId and String
+        ref: 'users_collection',
         required: function() { return this.isGroup; } // Only required for groups
     },
     readBy : [{type: mongoose.Schema.Types.ObjectId,  ref : ''}],

@@ -1,7 +1,6 @@
 import UserModel from "../models/user_model.js";
 
 export async function getFriendList(req, res, next){
-    console.log(req);
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;

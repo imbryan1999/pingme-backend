@@ -3,8 +3,8 @@ import { getOrCreatePrivateChat, createGroupChat, getUserChatRooms } from "../co
 
 const router = express.Router();
 
-router.post('/private', getOrCreatePrivateChat);
-router.get('/user/:userId', getUserChatRooms);
+// router.post('/private', getOrCreatePrivateChat);
+// router.get('/user/:userId', getUserChatRooms);
 // router.post('/group', createGroupChat);
 
 export default router;
