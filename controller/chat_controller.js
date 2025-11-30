@@ -1,43 +1,56 @@
 import ChatRoom from '../models/chatroom_model.js';
 import Message from '../models/message_model.js';
 import UserModel from '../models/user_model.js';
-// 1. Get or create 1-to-1 chat room
 
+/**
+ * Create or return existing private chat between two users.
+ * Ensures:
+ * - No duplicate chatRooms
+ * - Order-independent searching ($all)
+ * - participants field used consistently
+ * - Returns fully populated chat
+ */
 export const getOrCreatePrivateChat = async (userId1, userId2) => {
-  const user1 = await UserModel.findOne({ userId: userId1 });
-  const user2 = await UserModel.findOne({ userId: userId2 });
-
-  if (!user1 || !user2) {
-    throw new Error('User IDs are required');
-  }
-
   try {
-    const participants = [user1._id, user2._id].sort();
-    
-    // Check if private room already exists
+    // Convert userId to UserModel ObjectId
+    const user1 = await UserModel.findOne({ userId: userId1 });
+    const user2 = await UserModel.findOne({ userId: userId2 });
+
+    if (!user1 || !user2) {
+      throw new Error('Invalid userId: users not found');
+    }
+
+    // Sort ensures consistent order, avoids duplicate rooms
+    const participants = [user1._id.toString(), user2._id.toString()].sort();
+
+    // 1️⃣ Try to FIND existing 1-to-1 room
     let room = await ChatRoom.findOne({
       isGroup: false,
       participants: { $all: participants, $size: 2 }
-    }).populate('participants', 'name username userId');
+    })
+      .populate('participants', 'name username userId avatar');
 
-    // If not found, create a new one
+    // 2️⃣ If NOT FOUND → CREATE NEW
     if (!room) {
       room = await ChatRoom.create({
         isGroup: false,
-        participants
+        participants: participants
       });
 
-      room = await ChatRoom.findById(room._id).populate('participants', 'name username userId');
+      room = await ChatRoom.findById(room._id)
+        .populate('participants', 'name username userId avatar');
     }
 
     return room;
+
   } catch (err) {
-    console.error('Private chat error:', err);
-    // Add more context to the error
-    if (err.name === 'CastError') {
-      throw new Error(`Invalid user ID format. Please check the provided IDs: ${userId1}, ${userId2}`);
+    console.error("🔥 getOrCreatePrivateChat ERROR:", err.message);
+
+    if (err.name === "CastError") {
+      throw new Error(`Invalid ObjectId format: ${err.value}`);
     }
-    throw err;
+
+    throw new Error("Failed to create or fetch private chat: " + err.message);
   }
 };
 

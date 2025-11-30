@@ -95,8 +95,9 @@ export const registerSocketEvents = (io) => {
         }
 
         // Notify participants (if connected) about newly-created chat
-        if (chat && Array.isArray(chat.members)) {
-          for (const member of chat.members) {
+        const memberList = chat.participants || [];
+        if (Array.isArray(memberList) && memberList.length > 0) {
+          for (const member of memberList) {
             const memberId = member.toString();
             notifyUserSockets(memberId, SOCKET_EVENTS.PRIVATE_CHAT_CREATED, chat);
           }
@@ -167,20 +168,20 @@ export const registerSocketEvents = (io) => {
 
         // 2) Notify members (who are members of chat but might not be in the room)
         const chat = await ChatRoom.findById(chatRoomId).lean();
-        if (chat && Array.isArray(chat.members)) {
+        const memberList = chat?.participants ?? [];
+        
+        if (Array.isArray(memberList) && memberList.length > 0) {
           // recipients = members except the sender
-          const recipients = chat.members.map((m) => m.toString()).filter((m) => m !== userId?.toString());
+          const recipients = memberList.map(m => m.toString()).filter(m => m !== userId?.toString());
 
           // For each recipient, notify all their connected sockets (as notification)
-          for (const recipientId of recipients) {
-            // Notify each socket separately so devices not in room also get notified
-            notifyUserSockets(recipientId, SOCKET_EVENTS.NEW_MESSAGE, {
-              chatRoomId,
-              messageId: messageObj._id,
-              message: messageObj,
+            for (const recipientId of recipients) {
+                notifyUserSockets(recipientId, SOCKET_EVENTS.NEW_MESSAGE, {
+                chatRoomId,
+                messageId: messageObj._id,
+                message: messageObj,
             });
-          }
-
+        }
           console.log(`[SEND_MESSAGE] Notified ${recipients.length} recipients`);
         } else {
           console.log(`[SEND_MESSAGE] No chat found or empty members for chatRoomId=${chatRoomId}`);
