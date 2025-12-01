@@ -14,6 +14,8 @@ export const SOCKET_EVENTS = {
     TYPING: 'typing',
     STOP_TYPING: 'stopTyping',
     UPDATE_STATUS: 'statusUpdated',
+    NEW_MESSAGE_ALERT: "new_message_alert",
+    FETCH_MESSAGE: "fetch_messages",
 
     // Private chat
     CREATE_PRIVATE_CHAT: "createPrivateChat",

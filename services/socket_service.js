@@ -144,72 +144,98 @@ export const registerSocketEvents = (io) => {
      * - ACK sender via callback and via MESSAGE_SENT event
      */
     socket.on(SOCKET_EVENTS.SEND_MESSAGE, async ({ chatRoomId, content }, callback) => {
-      try {
-        console.log(`[${socket.id}] SEND_MESSAGE by user=${userId} chatRoom=${chatRoomId}`);
-        if (!chatRoomId) throw new Error("chatRoomId is required");
-        if (!content || !content.toString().trim()) throw new Error("Message content cannot be empty");
+  try {
+    console.log(
+      `[${socket.id}] SEND_MESSAGE by user=${userId} chatRoom=${chatRoomId}`
+    );
 
-        // create and persist message
-        const messageDoc = await Message.create({
-          senderId: userId,
-          chatRoomId,
-          content,
-          status: "sent",
-        });
+    if (!chatRoomId) throw new Error("chatRoomId is required");
+    if (!content || !content.toString().trim())
+      throw new Error("Message content cannot be empty");
 
-        const messageObj = { ...messageDoc.toObject(), senderId: userId };
-
-        // 1) Broadcast to all sockets currently in the chat room (includes sender if they joined)
-        io.to(chatRoomId).emit(SOCKET_EVENTS.NEW_MESSAGE, {
-          chatRoomId,
-          message: messageObj,
-        });
-        console.log(`[SEND_MESSAGE] Broadcasted NEW_MESSAGE to room ${chatRoomId}`);
-
-        // 2) Notify members (who are members of chat but might not be in the room)
-        const chat = await ChatRoom.findById(chatRoomId).lean();
-        const memberList = chat?.participants ?? [];
-        
-        if (Array.isArray(memberList) && memberList.length > 0) {
-          // recipients = members except the sender
-          const recipients = memberList.map(m => m.toString()).filter(m => m !== userId?.toString());
-
-          // For each recipient, notify all their connected sockets (as notification)
-            for (const recipientId of recipients) {
-                notifyUserSockets(recipientId, SOCKET_EVENTS.NEW_MESSAGE, {
-                chatRoomId,
-                messageId: messageObj._id,
-                message: messageObj,
-            });
-        }
-          console.log(`[SEND_MESSAGE] Notified ${recipients.length} recipients`);
-        } else {
-          console.log(`[SEND_MESSAGE] No chat found or empty members for chatRoomId=${chatRoomId}`);
-        }
-
-        // 3) ACK to sender via callback + direct event
-        if (typeof callback === "function") {
-          callback({ status: "success", message: messageObj });
-        }
-
-        // send explicit ack to the sender socket
-        socket.emit(SOCKET_EVENTS.MESSAGE_SENT, { chatRoomId, message: messageObj });
-
-        // 4) update chatroom timestamp
-        await ChatRoom.updateOne({ _id: chatRoomId }, { $set: { updatedAt: new Date() } });
-
-      } catch (err) {
-        console.error("SEND_MESSAGE error:", err);
-        // ack error back to sender
-        if (typeof callback === "function") {
-          callback({ status: "error", message: err.message });
-        }
-        socket.emit("error", { event: SOCKET_EVENTS.SEND_MESSAGE, message: err.message });
-      }
+    // 1️⃣ Create & persist message
+    const messageDoc = await Message.create({
+      senderId: userId,
+      chatRoomId,
+      content,
+      status: "sent",
     });
 
+    const messageObj = {
+      ...messageDoc.toObject(),
+      senderId: userId,
+    };
+
+    // 2️⃣ Broadcast REAL message ONLY to users currently in room
+    io.to(chatRoomId).emit(SOCKET_EVENTS.NEW_MESSAGE, {
+      chatRoomId,
+      message: messageObj,
+    });
+    console.log(
+      `[SEND_MESSAGE] Broadcasted NEW_MESSAGE to room ${chatRoomId}`
+    );
+
+    // 3️⃣ Notify members outside room (ALERT only)
+    const chat = await ChatRoom.findById(chatRoomId).lean();
+    const memberList = chat?.participants ?? [];
+
+    if (Array.isArray(memberList) && memberList.length > 0) {
+      const recipients = memberList
+        .map((m) => m.toString())
+        .filter((m) => m !== userId?.toString());
+
+      for (const recipientId of recipients) {
+        notifyUserSockets(
+          recipientId,
+          SOCKET_EVENTS.NEW_MESSAGE_ALERT, // SAFE event
+          {
+            chatRoomId,
+            message: messageObj, // only preview is usually sent
+          }
+        );
+      }
+
+      console.log(`[SEND_MESSAGE] Notified ${recipients.length} recipients`);
+    } else {
+      console.log(
+        `[SEND_MESSAGE] No chat found or empty members for chatRoomId=${chatRoomId}`
+      );
+    }
+
+    // 4️⃣ ACK to sender via callback
+    if (typeof callback === "function") {
+      callback({ status: "success", message: messageObj });
+    }
+
+    // 5️⃣ ACK event to sender socket
+    socket.emit(SOCKET_EVENTS.MESSAGE_SENT, {
+      chatRoomId,
+      message: messageObj,
+    });
+
+    // 6️⃣ Update chatroom timestamp
+    await ChatRoom.updateOne(
+      { _id: chatRoomId },
+      { $set: { updatedAt: new Date() } }
+    );
+  } catch (err) {
+    console.error("SEND_MESSAGE error:", err);
+
+    // Callback error ACK
+    if (typeof callback === "function") {
+      callback({ status: "error", message: err.message });
+    }
+
+    socket.emit("error", {
+      event: SOCKET_EVENTS.SEND_MESSAGE,
+      message: err.message,
+    });
+  }
+});
+
+
     // ---------- NEW_MESSAGE (message fetch / history) ----------
-    socket.on(SOCKET_EVENTS.NEW_MESSAGE, async ({ chatRoomId, page = 1 }, callback) => {
+    socket.on(SOCKET_EVENTS.FETCH_MESSAGE, async ({ chatRoomId, page = 1 }, callback) => {
       try {
         if (!chatRoomId) throw new Error("chatRoomId is required");
         const messages = await Message.find({ chatRoomId })
