@@ -111,32 +111,23 @@ export const registerSocketEvents = (io) => {
     });
 
     // ---------- JOIN / LEAVE CHAT ROOM ----------
-    // socket.on(SOCKET_EVENTS.JOIN_ROOM, (chatId) => {
-    //   try {
-    //     if (!chatId) return;
-    //     socket.join(chatId);
-    //     console.log(`👥 Socket ${socket.id} joined chatRoom ${chatId}`);
-    //   } catch (err) {
-    //     console.error("JOIN_ROOM error:", err);
-    //   }
-    // });
-
     socket.on(SOCKET_EVENTS.JOIN_ROOM, (roomId, callback) => {
       try {
-        if (!roomId) return;
+        if (!roomId) return callback({status: "error", message: "roomId missing"});
           socket.join(roomId);
-          console.log(`👥 Socket ${socket.id} joined chatRoom ${chatId}`);
-
-          // MUST send ACK response
-          callback({status: "success",roomId, message: "Joined room successfully"});
-        } catch (err) {
+          console.log(`👥 Socket ${socket.id} joined chatRoom ${roomId}`);
           callback({
-            status: "error",
-            message: err.message
+            status: "success",
+            roomId,
+            message: "Joined room successfully"
+          });
+      } catch (err) {
+        callback({
+          status: "error",
+          message: err.message
       });
   }
 });
-
 
     socket.on(SOCKET_EVENTS.LEAVE_ROOM, (chatId) => {
       try {
