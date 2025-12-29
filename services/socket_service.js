@@ -1,5 +1,5 @@
 import { SOCKET_EVENTS } from "../config/socket_event_constants.js";
-import { getOrCreatePrivateChat } from "../controller/chat_controller.js";
+import { getPrivateChatIfExists, createPrivateChatOnFirstMessage } from "../controller/chat_controller.js";
 import ChatRoom from "../models/chatroom_model.js";
 import Message from "../models/message_model.js";
 import { socketAuthMiddleware } from "./socket_auth.js";
@@ -87,7 +87,14 @@ export const registerSocketEvents = (io) => {
     socket.on(SOCKET_EVENTS.CREATE_PRIVATE_CHAT, async ({ userId1, userId2 }, callback) => {
       try {
         console.log(`[${socket.id}] CREATE_PRIVATE_CHAT for ${userId1} - ${userId2}`);
-        const chat = await getOrCreatePrivateChat(userId1, userId2);
+        const chat = await getPrivateChatIfExists(userId1, userId2);
+
+        if (!chat) {
+          return callback({
+            status: "no_room",
+            room: null
+          });
+        }
 
         // Ack to requester
         if (typeof callback === "function") {
@@ -151,15 +158,24 @@ export const registerSocketEvents = (io) => {
      * - notify other members' sockets (if they haven't joined room) as required (notifications)
      * - ACK sender via callback and via MESSAGE_SENT event
      */
-    socket.on(SOCKET_EVENTS.SEND_MESSAGE, async ({ chatRoomId, content }, callback) => {
+    socket.on(SOCKET_EVENTS.SEND_MESSAGE, async ({ chatRoomId, receiverId, content }, callback) => {
   try {
     console.log(
       `[${socket.id}] SEND_MESSAGE by user=${userId} chatRoom=${chatRoomId}`
     );
 
-    if (!chatRoomId) throw new Error("chatRoomId is required");
     if (!content || !content.toString().trim())
       throw new Error("Message content cannot be empty");
+
+    let room = null;
+    if (!chatRoomId) {
+      if (!receiverId) throw new Error("receiverId is required for first message");
+      room = await createPrivateChatOnFirstMessage(userId, receiverId, content);
+      chatRoomId = room._id.toString();
+    } else {
+      room = await ChatRoom.findById(chatRoomId);
+      if (!room) throw new Error("ChatRoom not found");
+    }
 
     // 1️⃣ Create & persist message
     const messageDoc = await Message.create({
@@ -182,6 +198,26 @@ export const registerSocketEvents = (io) => {
     console.log(
       `[SEND_MESSAGE] Broadcasted NEW_MESSAGE to room ${chatRoomId}`
     );
+
+    // Update ChatRoom (last message + unread counts)
+    // const chatRoom = await ChatRoom.findById(chatRoomId);
+    // if (!chatRoom) throw new Error("ChatRoom not found");
+
+    room.lastMessage = content;
+    room.lastMessageAt = new Date();
+
+    // Reset unread for sender
+    room.unreadCount = room.unreadCount || {};
+    room.unreadCount[userId] = 0;
+
+    // Increase unread for other participants
+    room.participants.forEach(id => {
+      if (id.toString() !== userId.toString()) {
+        room.unreadCount[id] = (room.unreadCount[id] || 0) + 1;
+      }
+    });
+
+    await room.save();
 
     // 3️⃣ Notify members outside room (ALERT only)
     const chat = await ChatRoom.findById(chatRoomId).lean();

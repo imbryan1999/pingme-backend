@@ -41,7 +41,7 @@ export async function register(req, res, next) {
         // }
 
         // store unverified user + otp in DB (you can hash the OTP for security)
-        await UserService.storeTempUser(username, fullname, email, password, photo, "0000");
+        await UserService.storeTempUser(username, fullname, email, password, photo, "1234");
         res.status(200).json({
             status: true,
             statusCode: 200,
@@ -123,8 +123,11 @@ export async function verifyOtp(req, res) {
         
         const successResponse = await UserService.signUp(userData.username, userData.fullname, userData.email, userData.password, userData.photo)
         let tokenData = {_id: successResponse.userId, email: successResponse.email}
-    const JWT_SECRET = process.env.JWT_SECRET || 'secret';
-    const token = await UserService.generateToken(tokenData, JWT_SECRET, '24h')
+        const JWT_SECRET = process.env.JWT_SECRET || 'secret';
+        const token = await UserService.generateToken(tokenData, JWT_SECRET, '24h')
+
+        const decodedToken = jwt.decode(token);
+        console.log("Generated token payload:", decodedToken);
 
         //send success response
         res.status(200).json({

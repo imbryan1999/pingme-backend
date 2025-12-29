@@ -13,13 +13,15 @@ class UserService{
         }
     }
 
-    static async checkUserExist(email) {
-        try {
-            return await UserModel.findOne({email})            
-        } catch (error) {
-            throw error
-        }
-    }
+static async checkUserExist(email) {
+    const user = await UserModel.findOne({ email: email });
+    console.log("Found user from DB:", {
+        _id: user?._id,
+        email: user?.email,
+        entireDoc: user ? JSON.parse(JSON.stringify(user)) : null
+    });
+    return user;
+}
 
     static async generateToken(tokenData, secretKey, jwt_expire) {
         return jwt.sign(tokenData, secretKey, {expiresIn: jwt_expire})

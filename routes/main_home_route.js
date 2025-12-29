@@ -1,8 +1,10 @@
 import express from "express"
-import { getFriendList } from "../controller/friendlist_controller.js"
+import { getFriendList, getMyChatRooms } from "../controller/friendlist_controller.js"
+import { httpAuthMiddleware } from "../services/auth_middleware.js"
 
 const router = express.Router()
 
-router.get('/friendList', getFriendList)
-// https://youtu.be/_mR6bY-ndso?si=ypCpW20bCRfX73OM
+router.get('/friendList', getFriendList);
+router.get('/myChatRooms', httpAuthMiddleware, getMyChatRooms);
+
 export default router

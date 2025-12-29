@@ -13,7 +13,7 @@ const chatRoomSchema = new Schema({
     },    
     isGroup: {type: Boolean, default: false},
     participants: [{
-        type: mongoose.Schema.Types.ObjectId,  // Can handle both ObjectId and String
+        type: String,  // Can handle both ObjectId and String
         ref: 'users_collection',
         required: true
     }],    
@@ -23,6 +23,20 @@ const chatRoomSchema = new Schema({
         required: function() { return this.isGroup; } // Only required for groups
     },
     readBy : [{type: mongoose.Schema.Types.ObjectId,  ref : ''}],
+
+    lastMessage: {
+        type: String,
+        default: ''
+    },
+    lastMessageAt: {
+        type: Date,
+        default: null
+    },
+    unreadCount: {
+        type: Map,
+        of: Number,
+        default: {}
+    }
     
   }, {timeseries: true}
   )

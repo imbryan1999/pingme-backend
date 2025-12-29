@@ -10,9 +10,55 @@ import UserModel from '../models/user_model.js';
  * - participants field used consistently
  * - Returns fully populated chat
  */
-export const getOrCreatePrivateChat = async (userId1, userId2) => {
+// export const getOrCreatePrivateChat = async (userId1, userId2) => {
+//   try {
+//     // Convert userId to UserModel ObjectId
+//     const user1 = await UserModel.findOne({ userId: userId1 });
+//     const user2 = await UserModel.findOne({ userId: userId2 });
+
+//     if (!user1 || !user2) {
+//       throw new Error('Invalid userId: users not found');
+//     }
+
+//     console.log("✅ Found users - IDs:", user1._id, user2._id);
+//     console.log("✅ Found users - userIds:", user1.userId, user2.userId);
+
+//     // Sort ensures consistent order, avoids duplicate rooms
+//     const participants = [user1._id.toString(), user2._id.toString()].sort();
+
+//     // 1️⃣ Try to FIND existing 1-to-1 room
+//     let room = await ChatRoom.findOne({
+//       isGroup: false,
+//       participants: { $all: participants, $size: 2 }
+//     })
+//       .populate('participants', 'name username userId avatar');
+
+//     // 2️⃣ If NOT FOUND → CREATE NEW
+//     if (!room) {
+//       room = await ChatRoom.create({
+//         isGroup: false,
+//         participants: participants
+//       });
+
+//       room = await ChatRoom.findById(room._id)
+//         .populate('participants', 'name username userId avatar');
+//     }
+
+//     return room;
+
+//   } catch (err) {
+//     console.error("🔥 getOrCreatePrivateChat ERROR:", err.message);
+
+//     if (err.name === "CastError") {
+//       throw new Error(`Invalid ObjectId format: ${err.value}`);
+//     }
+
+//     throw new Error("Failed to create or fetch private chat: " + err.message);
+//   }
+// };
+
+export const getPrivateChatIfExists = async (userId1, userId2) => {
   try {
-    // Convert userId to UserModel ObjectId
     const user1 = await UserModel.findOne({ userId: userId1 });
     const user2 = await UserModel.findOne({ userId: userId2 });
 
@@ -20,39 +66,61 @@ export const getOrCreatePrivateChat = async (userId1, userId2) => {
       throw new Error('Invalid userId: users not found');
     }
 
-    // Sort ensures consistent order, avoids duplicate rooms
     const participants = [user1._id.toString(), user2._id.toString()].sort();
 
-    // 1️⃣ Try to FIND existing 1-to-1 room
-    let room = await ChatRoom.findOne({
+    const room = await ChatRoom.findOne({
       isGroup: false,
-      participants: { $all: participants, $size: 2 }
-    })
-      .populate('participants', 'name username userId avatar');
+      participants: { $all: participants, $size: 2 },
+      lastMessage: { $exists: true, $ne: '' } // ✅ important
+    }).populate('participants', 'name username userId avatar');
 
-    // 2️⃣ If NOT FOUND → CREATE NEW
-    if (!room) {
-      room = await ChatRoom.create({
-        isGroup: false,
-        participants: participants
-      });
-
-      room = await ChatRoom.findById(room._id)
-        .populate('participants', 'name username userId avatar');
-    }
-
-    return room;
+    return room; // can be null
 
   } catch (err) {
-    console.error("🔥 getOrCreatePrivateChat ERROR:", err.message);
-
-    if (err.name === "CastError") {
-      throw new Error(`Invalid ObjectId format: ${err.value}`);
-    }
-
-    throw new Error("Failed to create or fetch private chat: " + err.message);
+    console.error("🔥 getPrivateChatIfExists ERROR:", err.message);
+    throw err;
   }
 };
+
+export const createPrivateChatOnFirstMessage = async (
+  senderId,
+  receiverId,
+  firstMessageContent
+) => {
+  if (!firstMessageContent || !firstMessageContent.trim()) {
+    throw new Error("First message is required to create chat room");
+  }
+
+  const user1 = await UserModel.findOne({ userId: senderId });
+  const user2 = await UserModel.findOne({ userId: receiverId });
+
+  if (!user1 || !user2) {
+    throw new Error("Users not found");
+  }
+
+  const participants = [user1._id.toString(), user2._id.toString()].sort();
+
+  let room = await ChatRoom.findOne({
+    isGroup: false,
+    participants: { $all: participants, $size: 2 }
+  });
+
+  // ✅ Create room ONLY if message exists
+  if (!room) {
+    room = await ChatRoom.create({
+      isGroup: false,
+      participants,
+      lastMessage: firstMessageContent,
+      lastMessageAt: new Date(),
+      unreadCount: {
+        [user2._id.toString()]: 1
+      }
+    });
+  }
+
+  return room;
+};
+
 
 // export const createAndSendMessage = async ({ senderId, chatRoomId, content }) => {
 //   try {

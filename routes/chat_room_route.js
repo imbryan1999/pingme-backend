@@ -1,5 +1,5 @@
 import express from "express"
-import { getOrCreatePrivateChat, createGroupChat, getUserChatRooms } from "../controller/chat_controller.js"
+import { createGroupChat, getUserChatRooms } from "../controller/chat_controller.js"
 
 const router = express.Router();
 
