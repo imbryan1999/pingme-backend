@@ -10,7 +10,7 @@ import { sendOTPEmail } from "../services/email_service.js";
 export async function register(req, res, next) {
     console.log(req.body)
     try {
-        const {username, fullname, email, password, photo} = req.body
+        const {username, fullname, email, password, photo, fcmToken} = req.body
 
         // check user exist
         const existUser = await UserService.checkUserExist(email)
@@ -41,7 +41,7 @@ export async function register(req, res, next) {
         // }
 
         // store unverified user + otp in DB (you can hash the OTP for security)
-        await UserService.storeTempUser(username, fullname, email, password, photo, "1234");
+        await UserService.storeTempUser(username, fullname, email, password, photo, fcmToken, "1234");
         res.status(200).json({
             status: true,
             statusCode: 200,
@@ -61,7 +61,7 @@ export async function register(req, res, next) {
 export async function login(req, res, next) {
     console.log(req.body)
     try {
-        const {email, password} = req.body
+        const {email, password, fcmToken} = req.body
         const existingUser = await UserService.checkUserExist(email)
         console.log("--------------- user --------------", existingUser)
 
@@ -81,9 +81,15 @@ export async function login(req, res, next) {
               });
         }
 
+        // Update FCM token if provided
+        if (fcmToken) {
+            existingUser.fcmToken = fcmToken;
+            await existingUser.save();
+        }
+
         let tokenData = {_id: existingUser.userId, email: existingUser.email}        
-    const JWT_SECRET = process.env.JWT_SECRET || 'secret';
-    const token = await UserService.generateToken(tokenData, JWT_SECRET, '24h')
+        const JWT_SECRET = process.env.JWT_SECRET || 'secret';
+        const token = await UserService.generateToken(tokenData, JWT_SECRET, '24h')
 
         const userInfo = {
             userId : existingUser.userId,
@@ -91,6 +97,7 @@ export async function login(req, res, next) {
             fullname : existingUser.fullname,
             email : existingUser.email,
             photo : existingUser.photo ?? "",
+            fcmToken : existingUser.fcmToken ?? "",
             token : token
         }
 
@@ -121,7 +128,7 @@ export async function verifyOtp(req, res) {
             });
         }
         
-        const successResponse = await UserService.signUp(userData.username, userData.fullname, userData.email, userData.password, userData.photo)
+        const successResponse = await UserService.signUp(userData.username, userData.fullname, userData.email, userData.password, userData.photo, userData.fcmToken)
         let tokenData = {_id: successResponse.userId, email: successResponse.email}
         const JWT_SECRET = process.env.JWT_SECRET || 'secret';
         const token = await UserService.generateToken(tokenData, JWT_SECRET, '24h')
@@ -140,6 +147,7 @@ export async function verifyOtp(req, res) {
             "fullname": successResponse.fullname,
             "email" : successResponse.email,
             "photo" : successResponse.photo,
+            "fcmToken" : successResponse.fcmToken,
             "token" : token
           }  
         })

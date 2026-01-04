@@ -27,7 +27,7 @@ static async checkUserExist(email) {
         return jwt.sign(tokenData, secretKey, {expiresIn: jwt_expire})
     }
 
-    static async storeTempUser(username, fullname, email, password, photo, otp) {
+    static async storeTempUser(username, fullname, email, password, photo, fcmToken, otp) {
         try {
             // Optional: delete existing temp user if re-registering
             await TempUserModel.findOneAndDelete({ email });
@@ -38,6 +38,7 @@ static async checkUserExist(email) {
               email,
               password,
               photo,
+              fcmToken,
               otp,
             });
         

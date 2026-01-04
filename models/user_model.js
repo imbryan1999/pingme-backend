@@ -14,7 +14,8 @@ const userSchema = new Schema({
   password : {type: String, require: true},
   photo : {type: String},
   lastseen : {type: String},
-  isOnline : {type: Boolean}
+  isOnline : {type: Boolean},
+  fcmToken: { type: String, default: null }
 }, {timeseries: true}
 )
 

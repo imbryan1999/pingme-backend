@@ -5,6 +5,7 @@ import Message from "../models/message_model.js";
 import { socketAuthMiddleware } from "./socket_auth.js";
 import mongoose from "mongoose";
 import UserModel from "../models/user_model.js";
+import { sendPushNotification } from "./push_notification_service.js";
 
 /**
  * registerSocketEvents(io)
@@ -198,6 +199,18 @@ export const registerSocketEvents = (io) => {
     console.log(
       `[SEND_MESSAGE] Broadcasted NEW_MESSAGE to room ${chatRoomId}`
     );
+
+    // push notification to receiver
+      const receiver = await UserModel.findOne({ userId: receiverId });
+      console.log(`fcmtoken ${receiver.fcmToken}`);
+      if (receiver) {
+          await sendPushNotification(
+          receiver.fcmToken,
+          'New Message',
+          content,
+        { chatRoomId: chatRoomId.toString(), senderId: userId.toString(), receiverId: receiverId.toString() }
+      );
+    }
 
     // Update ChatRoom (last message + unread counts)
     // const chatRoom = await ChatRoom.findById(chatRoomId);
