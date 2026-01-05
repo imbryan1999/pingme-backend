@@ -12,9 +12,9 @@
   "license": "ISC",
   "description": "",
   "type": "module",
+  "packageManager": "yarn@4.10.3",
   "dependencies": {
     "@sendgrid/mail": "^8.1.5",
-    "bcrypt": "^5.1.1",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
